@@ -8,6 +8,10 @@ app = Flask(__name__)
 CORS(app)  # <- Habilita CORS para todas las rutas
 
 @app.route('/')
+def home():
+    return 'Servidor Flask funcionando. Usa /procesar-imagen para subir una imagen.'
+
+@app.route('/procesar-imagen', methods=['POST'])
 def procesar_imagen():
     if 'imagen' not in request.files:
         return jsonify({'resultado': None, 'error': 'No se envió una imagen'}), 400
@@ -20,8 +24,13 @@ def procesar_imagen():
     imagen_path = os.path.join(carpeta_temporal, nombre_seguro)
     imagen.save(imagen_path)
 
-    texto_extraido = extraer_texto_qr(imagen_path)
-    os.remove(imagen_path)
+    try:
+        texto_extraido = extraer_texto_qr(imagen_path)
+    except Exception as e:
+        os.remove(imagen_path)  # Asegurarse de borrar la imagen en caso de error
+        return jsonify({'resultado': None, 'error': str(e)}), 500
+
+    os.remove(imagen_path)  # Asegurarse de borrar la imagen después de procesarla
 
     if texto_extraido and isinstance(texto_extraido, dict):
         return jsonify({'resultado': texto_extraido}), 200
