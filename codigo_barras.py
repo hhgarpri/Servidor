@@ -45,11 +45,14 @@ def detectar_codigo_barras(ruta_imagen):
 
     lector = BarCodeReader()
 
+    # Convertimos la imagen a escala de grises antes de procesar
+    img_gris = cv2.cvtColor(img_original, cv2.COLOR_BGR2GRAY)
     for intento in range(6):
         escala = 1 + intento * 0.2
         print(f"🔍 Intento con zoom x{escala:.1f}")
 
-        img_escalada = cv2.resize(img_original, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
+        # Realizamos un escalado en la imagen
+        img_escalada = cv2.resize(img_gris, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
 
         resultado = lector.decode(TEMP_ZOOM_PATH)
@@ -112,7 +115,6 @@ def extraer_texto_qr(ruta_imagen=""):
         print(f"🗑️ Imagen temporal eliminada: {ubicacion}")
 
     return datos
-
 
 def extraer_datos_cedula(texto):
     match = re.search(r'(\d{10})([A-ZÑÁÉÍÓÚÜ]+)', texto)
