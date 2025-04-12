@@ -7,8 +7,9 @@ WORKDIR /app
 # Copiar todo el contenido del proyecto al contenedor
 COPY . /app
 
-# Instalar Python 3 y pip
-RUN apk add --no-cache python3 py3-pip gcc musl-dev python3-dev libffi-dev
+# Instalar dependencias de Python y Java (si no están ya instaladas)
+RUN apk add --no-cache python3 py3-pip gcc musl-dev python3-dev libffi-dev \
+    && apk add --no-cache openjdk11  # Agregar Java si no está en la imagen base
 
 # Instalar dependencias de Python (requirements.txt debe existir)
 RUN pip install --no-cache-dir -r requirements.txt
