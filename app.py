@@ -7,7 +7,7 @@ from codigo_barras import extraer_texto_qr
 app = Flask(__name__)
 CORS(app)  # <- Habilita CORS para todas las rutas
 
-@app.route('/procesar-imagen', methods=['POST'])
+@app.route('/')
 def procesar_imagen():
     if 'imagen' not in request.files:
         return jsonify({'resultado': None, 'error': 'No se envió una imagen'}), 400
