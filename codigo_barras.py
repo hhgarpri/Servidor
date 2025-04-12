@@ -12,9 +12,11 @@ def leer_codigo_barras(imagen_path):
     if not os.path.exists(imagen_path):
         print(f"❌ La imagen no existe: {imagen_path}")
         return ""
-
+    
     reader = BarCodeReader()
     resultados = reader.decode(imagen_path)
+    
+    print(f"🔍 Resultados de la lectura de código de barras: {resultados}")
     
     if not resultados:
         return ""
@@ -38,6 +40,8 @@ def binarizar_negros(imagen, umbral=80):
     return resultado
 
 def detectar_codigo_barras(ruta_imagen):
+    print(f"🔍 Cargando imagen desde: {ruta_imagen}")
+    
     img_original = cv2.imread(ruta_imagen)
     if img_original is None:
         print("❌ No se pudo cargar la imagen.")
@@ -45,17 +49,16 @@ def detectar_codigo_barras(ruta_imagen):
 
     lector = BarCodeReader()
 
-    # Convertimos la imagen a escala de grises antes de procesar
-    img_gris = cv2.cvtColor(img_original, cv2.COLOR_BGR2GRAY)
     for intento in range(6):
         escala = 1 + intento * 0.2
         print(f"🔍 Intento con zoom x{escala:.1f}")
 
-        # Realizamos un escalado en la imagen
-        img_escalada = cv2.resize(img_gris, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
+        img_escalada = cv2.resize(img_original, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
 
         resultado = lector.decode(TEMP_ZOOM_PATH)
+        print(f"🔍 Resultado con zoom x{escala:.1f}: {resultado}")
+        
         if not resultado or 'parsed' not in resultado[0]:
             print(f"❌ No se detectó código con zoom x{escala:.1f}")
             continue
@@ -99,6 +102,8 @@ def extraer_texto_qr(ruta_imagen=""):
     texto = leer_codigo_barras(ubicacion)
     texto = texto.replace("\x00", " ").strip()
 
+    print(f"🔍 Texto extraído del código de barras: {texto}")
+
     datos = {}
 
     if re.match(r'^\d{10}\s+PubDSK_1', texto):
@@ -115,6 +120,7 @@ def extraer_texto_qr(ruta_imagen=""):
         print(f"🗑️ Imagen temporal eliminada: {ubicacion}")
 
     return datos
+
 
 def extraer_datos_cedula(texto):
     match = re.search(r'(\d{10})([A-ZÑÁÉÍÓÚÜ]+)', texto)
