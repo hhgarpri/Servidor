@@ -5,7 +5,14 @@ from werkzeug.utils import secure_filename
 from codigo_barras import extraer_texto_qr
 
 app = Flask(__name__)
-CORS(app)  # <- Habilita CORS para todas las rutas
+CORS(app)  # Habilita CORS para todas las rutas
+
+# Extensiones permitidas para archivos
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Verifica si el archivo tiene una extensión permitida
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def home():
@@ -17,6 +24,11 @@ def procesar_imagen():
         return jsonify({'resultado': None, 'error': 'No se envió una imagen'}), 400
 
     imagen = request.files['imagen']
+    
+    # Verificar si la imagen tiene una extensión permitida
+    if not allowed_file(imagen.filename):
+        return jsonify({'resultado': None, 'error': 'Archivo no permitido. Solo se permiten imágenes.'}), 400
+
     carpeta_temporal = "temporal"
     os.makedirs(carpeta_temporal, exist_ok=True)
 
@@ -35,8 +47,9 @@ def procesar_imagen():
     if texto_extraido and isinstance(texto_extraido, dict):
         return jsonify({'resultado': texto_extraido}), 200
     else:
-        return jsonify({'resultado': None, 'error': 'No se pudo extraer texto'}), 200
+        return jsonify({'resultado': None, 'error': 'No se pudo extraer texto del código QR'}), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Usa el puerto que Render asigna
-    app.run(host='0.0.0.0', port=port)
+    # El puerto es configurable, por si se ejecuta en diferentes entornos
+    port = int(os.environ.get("PORT", 5000))  # Usa el puerto que el entorno asigna
+    app.run(host='0.0.0.0', port=port)  # Asegúrate de que el servidor sea accesible externamente

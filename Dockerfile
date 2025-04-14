@@ -1,24 +1,35 @@
-# Usar la imagen base de Amazon Corretto 22 (Alpine)
-FROM amazoncorretto:22.0.2-alpine-jdk
+# Usa una imagen base de Python 3.9 con Alpine
+FROM python:3.9-alpine
 
-# Establecer el directorio de trabajo en el contenedor
+# Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
+RUN apk update && apk add --no-cache \
+    bash \
+    mesa-gl \
+    glib \
+    libx11 \
+    freetype-dev \
+    openjdk11 \
+    build-base \
+    cmake \
+    ninja \
+    linux-headers \
+    libgcc \
+    && rm -rf /var/cache/apk/*
+
+# Establecer el directorio de trabajo
 WORKDIR /app
 
-# Copiar todo el contenido del proyecto al contenedor
-COPY . /app
+# Copiar el archivo requirements.txt
+COPY requirements.txt /app/
 
-# Instalar dependencias de Python y Java (si no están ya instaladas)
-RUN apk add --no-cache python3 py3-pip gcc musl-dev python3-dev libffi-dev \
-    && apk add --no-cache openjdk11  # Agregar Java si no está en la imagen base
-
-# Instalar dependencias de Python (requirements.txt debe existir)
+# Instalar las dependencias de Python desde el archivo requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Establecer el directorio de trabajo a la carpeta 'target' donde está el archivo JAR
-WORKDIR /app/target
+# Copiar el resto del código fuente
+COPY . /app
 
-# Exponer el puerto del servidor Flask
+# Exponer el puerto que la aplicación usará
 EXPOSE 5000
 
-# Comando por defecto: ejecutar el archivo JAR generado por Maven
-CMD ["java", "-jar", "python-backend-1.0.0.jar"]
+# Comando para ejecutar la aplicación
+CMD ["python", "app.py"]
