@@ -16,6 +16,9 @@ RUN apk update && apk add --no-cache \
     libgcc \
     && rm -rf /var/cache/apk/*
 
+# Verificar que Java está instalado correctamente
+RUN java -version
+
 # Establecer el directorio de trabajo
 WORKDIR /app
 
