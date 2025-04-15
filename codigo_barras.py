@@ -24,10 +24,10 @@ def leer_codigo_barras(imagen_path):
         if raw_data:
             try:
                 if isinstance(raw_data, bytes):
-                    return raw_data.decode("latin-1", errors="ignore").replace("\x00", " ").strip()
+                    return raw_data.decode("utf-8", errors="ignore").replace("\x00", " ").strip()
                 return str(raw_data)
             except UnicodeDecodeError:
-                return raw_data.decode("utf-8")
+                return raw_data.decode("ISO-8859-1")
 
     return ""
 
