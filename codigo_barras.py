@@ -15,9 +15,7 @@ def leer_codigo_barras(imagen_path):
     
     reader = BarCodeReader()
     resultados = reader.decode(imagen_path)
-    
-    print(f"🔍 Resultados de la lectura de código de barras: {resultados}")
-    
+        
     if not resultados:
         return ""
 
@@ -57,7 +55,7 @@ def detectar_codigo_barras(ruta_imagen):
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
 
         resultado = lector.decode(TEMP_ZOOM_PATH)
-        print(f"🔍 Resultado con zoom x{escala:.1f}: {resultado}")
+        print(f"🔍 Resultado con zoom x{escala:.1f}")
         
         if not resultado or 'parsed' not in resultado[0]:
             print(f"❌ No se detectó código con zoom x{escala:.1f}")
@@ -101,9 +99,6 @@ def extraer_texto_qr(ruta_imagen=""):
 
     texto = leer_codigo_barras(ubicacion)
     texto = texto.replace("\x00", " ").strip()
-
-    print(f"🔍 Texto extraído del código de barras: {texto}")
-
     datos = {}
 
     if re.match(r'^\d{10}\s+PubDSK_1', texto):

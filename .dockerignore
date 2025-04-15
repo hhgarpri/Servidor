@@ -1,0 +1,30 @@
+# Ignorar caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de log
+*.log
+
+# Variables de entorno y configuraciones sensibles
+.env
+.env.*
+
+# Bases de datos locales
+*.db
+
+# Carpeta del repositorio Git (por si se clona dentro de otra carpeta)
+.git
+
+# Librerías locales que no deben subirse
+librerias/
+
+# Entornos virtuales
+env/
+venv/
+.venv/
+
+# Archivos de configuración de sistemas operativos
+.DS_Store
+Thumbs.db
