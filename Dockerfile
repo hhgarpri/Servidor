@@ -14,6 +14,8 @@ RUN apk update && apk add --no-cache \
     ninja \
     linux-headers \
     libgcc \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
     && rm -rf /var/cache/apk/*
 
 # Verificar que Java está instalado correctamente
