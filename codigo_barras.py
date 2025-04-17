@@ -95,7 +95,7 @@ def detectar_codigo_barras(ruta_imagen):
 def extraer_texto_qr(ruta_imagen=""):
     ubicacion = detectar_codigo_barras(ruta_imagen)
     if not ubicacion:
-        return {"resultado": "No se pudo detectar código de barras"}
+        return None
 
     texto = leer_codigo_barras(ubicacion)
     texto = texto.replace("\x00", " ").strip()

@@ -2,13 +2,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from werkzeug.utils import secure_filename
+from codigo_MRZ import detectar_mrz
 from codigo_barras import extraer_texto_qr
 
 app = Flask(__name__)
 CORS(app)  # Habilita CORS para todas las rutas
 
 # Extensiones permitidas para archivos
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Verifica si el archivo tiene una extensión permitida
 def allowed_file(filename):
@@ -24,10 +25,15 @@ def procesar_imagen():
         return jsonify({'resultado': None, 'error': 'No se envió una imagen'}), 400
 
     imagen = request.files['imagen']
-    
+
     # Verificar si la imagen tiene una extensión permitida
     if not allowed_file(imagen.filename):
         return jsonify({'resultado': None, 'error': 'Archivo no permitido. Solo se permiten imágenes.'}), 400
+
+    # Obtener y mostrar el tamaño de la imagen en bytes
+    tamanio_imagen = len(imagen.read())
+    print(f"Tamaño de la imagen recibida: {tamanio_imagen//1024} Kb")
+    imagen.seek(0)  # Volver al inicio del stream para poder guardarla
 
     carpeta_temporal = "temporal"
     os.makedirs(carpeta_temporal, exist_ok=True)
@@ -37,17 +43,20 @@ def procesar_imagen():
     imagen.save(imagen_path)
 
     try:
-        texto_extraido = extraer_texto_qr(imagen_path)
+        texto_extraido = detectar_mrz(imagen_path)
+        if texto_extraido is None:
+            texto_extraido = extraer_texto_qr(imagen_path)
     except Exception as e:
-        os.remove(imagen_path)  # Asegurarse de borrar la imagen en caso de error
+        os.remove(imagen_path)
         return jsonify({'resultado': None, 'error': str(e)}), 500
 
-    os.remove(imagen_path)  # Asegurarse de borrar la imagen después de procesarla
+    os.remove(imagen_path)
 
     if texto_extraido and isinstance(texto_extraido, dict):
         return jsonify({'resultado': texto_extraido}), 200
     else:
         return jsonify({'resultado': None, 'error': 'No se pudo extraer texto del código QR'}), 200
+
 
 if __name__ == '__main__':
     # El puerto es configurable, por si se ejecuta en diferentes entornos
