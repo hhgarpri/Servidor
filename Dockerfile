@@ -2,24 +2,24 @@
 FROM python:3.13-slim-bookworm
 
 # Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
-RUN apt-get update && apt-get install --no-install-recommends -y\
-        build-essential &&\
-        bash \
-        mesa-gl \
-        glib \
-        libx11 \
-        freetype-dev \
-        openjdk11 \
-        build-base \
-        cmake \
-        ninja \
-        linux-headers \
-        libgcc \
-        tesseract-ocr \
-        tesseract-ocr-data-eng \
-        tesseract-ocr-data-spa \
-        && apt-get clean \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    mesa-utils \
+    libglib2.0-0 \
+    libx11-6 \
+    libfreetype6-dev \
+    openjdk-11-jdk \
+    build-essential \
+    cmake \
+    ninja-build \
+    linux-headers-$(uname -r) \
+    libgcc-12-dev \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-spa \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
 
 # Verificar que Java está instalado correctamente
 RUN java -version
