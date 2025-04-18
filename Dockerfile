@@ -1,11 +1,15 @@
-# Usa una imagen base de Python 3.9 con Alpine
 FROM python:3.9-slim-buster
 
-# Actualizar paquetes del sistema
-RUN apt-get update && apt-get upgrade -y
+# 1. Instalar herramientas necesarias para usar apt
+RUN apt-get update && apt-get install -y \
+    gnupg \
+    wget \
+    curl \
+    lsb-release \
+    ca-certificates
 
-# Instalar dependencias del sistema
-RUN apt-get install -y --no-install-recommends \
+# 2. Instalar dependencias del sistema y Tesseract con idiomas
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     mesa-utils \
     libglib2.0-0 \
@@ -18,28 +22,26 @@ RUN apt-get install -y --no-install-recommends \
     libgcc-9-dev \
     tesseract-ocr \
     tesseract-ocr-eng \
-    tesseract-ocr-spa \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    tesseract-ocr-spa && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Verifica que Java y Tesseract están instalados
+RUN java -version && tesseract --version
 
-# Verificar que Java está instalado correctamente
-RUN java -version
-
-# Establecer el directorio de trabajo
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar el archivo requirements.txt
-COPY requirements.txt /app/
+# Copiar dependencias
+COPY requirements.txt .
 
-# Instalar las dependencias de Python desde el archivo requirements.txt
+# Instalar dependencias Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto del código fuente
-COPY . /app
+# Copiar el resto del código
+COPY . .
 
-# Exponer el puerto que la aplicación usará
+# Exponer puerto (si usas Flask o Gunicorn)
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
+# Comando final
 CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:$PORT app:app"]
-
