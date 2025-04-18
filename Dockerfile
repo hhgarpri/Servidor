@@ -1,21 +1,23 @@
 # Usa una imagen base de Python 3.9 con Alpine
-FROM python:3.9-slim
+FROM python:3.9-slim-buster
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
+RUN apk update && apk add --no-cache \
     bash \
-    && apt-get install -y mesa-utils \
-    && apt-get install -y libglib2.0-0 \
-    && apt-get install -y libx11-6 \
-    && apt-get install -y libfreetype6-dev \
-    && apt-get install -y openjdk-11-jdk \
-    && apt-get install -y build-essential \
-    && apt-get install -y cmake \
-    && apt-get install -y ninja-build \
-    && apt-get install -y libgcc-9-dev \
-    && apt-get install -y tesseract-ocr \
-    && apt-get install -y tesseract-ocr-eng \
-    && apt-get install -y tesseract-ocr-spa \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    mesa-gl \
+    glib \
+    libx11 \
+    freetype-dev \
+    openjdk11 \
+    build-base \
+    cmake \
+    ninja \
+    linux-headers \
+    libgcc \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
+    tesseract-ocr-data-spa \
+    && rm -rf /var/cache/apk/*
 
 # Verificar que Java está instalado correctamente
 RUN java -version
