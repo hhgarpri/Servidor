@@ -5,7 +5,7 @@ from io import BytesIO
 
 def filtrar_negro(imagen):
     imagen = imagen.convert("L")
-    umbral = 150
+    umbral = 100
     imagen = imagen.point(lambda x: 0 if x < umbral else 255, '1')
     imagen_mostrar = imagen.convert("L")
 
@@ -81,5 +81,4 @@ def imprimir_datos(cedula, apellido1, apellido2, nombre, fecha_nac, sexo, tipo_s
     print(f"Fecha Nac:        {fecha_nac}")
     print(f"Sexo:             {sexo}")
     print(f"Tipo de Sangre:   {tipo_sangre}")
-
 
