@@ -20,8 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-
-
 # Verificar que Java está instalado correctamente
 RUN java -version
 

@@ -5,7 +5,7 @@ from io import BytesIO
 
 def filtrar_negro(imagen):
     imagen = imagen.convert("L")
-    umbral = 125
+    umbral = 140
     imagen = imagen.point(lambda x: 0 if x < umbral else 255, '1')
     imagen_mostrar = imagen.convert("L")
 
