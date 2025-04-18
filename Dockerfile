@@ -1,5 +1,5 @@
 # Usa una imagen base de Python 3.9 con Alpine
-FROM python:3.9-slim-buster
+FROM python:3.9-alpine
 
 # Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
 RUN apk update && apk add --no-cache \
