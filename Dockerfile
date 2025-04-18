@@ -1,7 +1,11 @@
 # Usa una imagen base de Python 3.9 con Alpine
 FROM python:3.9-slim-buster
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Actualizar paquetes del sistema
+RUN apt-get update && apt-get upgrade -y
+
+# Instalar dependencias del sistema
+RUN apt-get install -y --no-install-recommends \
     bash \
     mesa-utils \
     libglib2.0-0 \
