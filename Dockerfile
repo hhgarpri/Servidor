@@ -1,5 +1,5 @@
-# Usa una imagen base de Python 3.9 con Alpine
-FROM python:3.9-alpine
+# Usa una imagen base de Python 3.9 slim-buster
+FROM python:3.9-slim-buster
 
 # Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
 RUN apk update && apk add --no-cache \
@@ -15,7 +15,8 @@ RUN apk update && apk add --no-cache \
     linux-headers \
     libgcc \
     tesseract-ocr \
-    tesseract-ocr-data-eng \
+    tesseract-ocr-eng \
+    tesseract-ocr-spa\
     && rm -rf /var/cache/apk/*
 
 # Verificar que Java está instalado correctamente

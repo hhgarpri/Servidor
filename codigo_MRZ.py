@@ -5,7 +5,7 @@ from io import BytesIO
 
 def filtrar_negro(imagen):
     imagen = imagen.convert("L")
-    umbral = 100
+    umbral = 125
     imagen = imagen.point(lambda x: 0 if x < umbral else 255, '1')
     imagen_mostrar = imagen.convert("L")
 
@@ -29,7 +29,7 @@ def detectar_mrz(ruta_imagen):
     print(f"🔍 Cargando imagen desde: {ruta_imagen}")
     imagen = Image.open(ruta_imagen)
     imagen_filtrada = filtrar_negro(imagen)
-    texto_crudo = pytesseract.image_to_string(imagen_filtrada, lang='eng')
+    texto_crudo = pytesseract.image_to_string(imagen_filtrada, lang='eng+spa')
     lineas = [linea.strip() for linea in texto_crudo.strip().split('\n') if linea.strip()]
 
     mrz = extraer_lineas_mrz_validas(lineas)
