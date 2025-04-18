@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libx11-6 \
     libfreetype6-dev \
-    openjdk-11-jdk \
+    openjdk-17-jdk \
     build-essential \
     cmake \
     ninja-build \
@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-spa \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
 
 
 # Verificar que Java está instalado correctamente
