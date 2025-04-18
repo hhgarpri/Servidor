@@ -1,23 +1,25 @@
 # Usa una imagen base de Python 3.9 con Alpine
-FROM python:3.9-alpine
+FROM python:3.13-slim-bookworm
 
 # Instalar dependencias del sistema, incluyendo compiladores, herramientas de construcción y Java
-RUN apk update && apk add --no-cache \
-    bash \
-    mesa-gl \
-    glib \
-    libx11 \
-    freetype-dev \
-    openjdk11 \
-    build-base \
-    cmake \
-    ninja \
-    linux-headers \
-    libgcc \
-    tesseract-ocr \
-    tesseract-ocr-data-eng \
-    tesseract-ocr-data-spa \
-    && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install --no-install-recommends -y\
+        build-essential &&\
+        bash \
+        mesa-gl \
+        glib \
+        libx11 \
+        freetype-dev \
+        openjdk11 \
+        build-base \
+        cmake \
+        ninja \
+        linux-headers \
+        libgcc \
+        tesseract-ocr \
+        tesseract-ocr-data-eng \
+        tesseract-ocr-data-spa \
+        && apt-get clean \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Verificar que Java está instalado correctamente
 RUN java -version
