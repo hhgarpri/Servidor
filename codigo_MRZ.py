@@ -3,12 +3,10 @@ from PIL import Image
 import re
 from io import BytesIO
 
-def filtrar_negro(imagen):
+def filtrar_negro(imagen, umbral):
     imagen = imagen.convert("L")
-    umbral = 140
     imagen = imagen.point(lambda x: 0 if x < umbral else 255, '1')
     imagen_mostrar = imagen.convert("L")
-
     buffer = BytesIO()
     imagen_mostrar.save(buffer, format='PNG')
     return imagen_mostrar
@@ -18,26 +16,38 @@ def limpiar_linea_mrz(linea):
 
 def extraer_lineas_mrz_validas(lineas):
     lineas_limpias = [limpiar_linea_mrz(l) for l in lineas]
-    
-    # Buscar 3 líneas consecutivas que tengan entre 28 y 32 caracteres
     for i in range(len(lineas_limpias) - 2):
         if all(28 <= len(lineas_limpias[j]) <= 32 for j in range(i, i + 3)):
-            return [l[:30] for l in lineas_limpias[i:i+3]]  # Cortar por si pasa los 30
+            return [l[:30] for l in lineas_limpias[i:i+3]]
     return None
 
 def detectar_mrz(ruta_imagen):
     print(f"🔍 Cargando imagen desde: {ruta_imagen}")
     imagen = Image.open(ruta_imagen)
-    imagen_filtrada = filtrar_negro(imagen)
-    texto_crudo = pytesseract.image_to_string(imagen_filtrada, lang='eng+spa')
-    lineas = [linea.strip() for linea in texto_crudo.strip().split('\n') if linea.strip()]
 
-    mrz = extraer_lineas_mrz_validas(lineas)
-    if mrz is None:
-        print("⚠️ No se encontraron 3 líneas MRZ válidas.")
-        return None
+    for umbral in range(200, 130, -10):  # 200, 190, ..., 140
+        print(f"🌓 Probando con umbral: {umbral}")
+        imagen_filtrada = filtrar_negro(imagen, umbral)
+        texto_crudo = pytesseract.image_to_string(imagen_filtrada, lang='eng+spa')
 
-    print("✅ MRZ detectado:")
+        if "<" not in texto_crudo:
+            print("❌ No se detectaron signos '<'. No parece haber MRZ.")
+            return None
+
+        lineas = [linea.strip() for linea in texto_crudo.strip().split('\n') if linea.strip()]
+        mrz = extraer_lineas_mrz_validas(lineas)
+
+        if mrz:
+            print("✅ MRZ detectado con éxito.")
+            break
+        else:
+            print("⏬ MRZ incompleto, bajando umbral...")
+            
+
+    if not mrz:
+        print("⚠️ No se identificaron los datos de la Cedula")
+        return False
+
     linea2 = mrz[1]
     fecha_raw = linea2[0:6]
     yy, mm, dd = fecha_raw[0:2], fecha_raw[2:4], fecha_raw[4:6]
@@ -54,7 +64,7 @@ def detectar_mrz(ruta_imagen):
     inicio = linea2.find("C0L")
     fin = linea2.find("<", inicio)
     cedula = linea2[inicio + 3:fin] if inicio != -1 and fin != -1 else ""
-    tipo_sangre = ""  # Se puede extraer si tienes reglas específicas
+    tipo_sangre = ""  # Puedes implementar esta parte si conoces el formato
 
     linea3 = mrz[2].replace('<', ' ').strip()
     partes = linea3.split()
@@ -81,4 +91,3 @@ def imprimir_datos(cedula, apellido1, apellido2, nombre, fecha_nac, sexo, tipo_s
     print(f"Fecha Nac:        {fecha_nac}")
     print(f"Sexo:             {sexo}")
     print(f"Tipo de Sangre:   {tipo_sangre}")
-
