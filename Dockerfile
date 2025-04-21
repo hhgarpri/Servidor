@@ -40,5 +40,4 @@ EXPOSE 5000
 
 # Comando para ejecutar la aplicación
 #CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:$PORT app:app"]
-CMD ["gunicorn", "-w", "4", "-k", "gthread", "--threads", "2", "-b", "0.0.0.0:5000", "app:app"]
-
+CMD ["sh", "-c", "gunicorn -w 4 -k gthread --threads 2 -b 0.0.0.0:$PORT app:app"]
