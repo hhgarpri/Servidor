@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
-    linux-headers-$(uname -r) \
     libgcc-12-dev \
     tesseract-ocr \
     tesseract-ocr-eng \
