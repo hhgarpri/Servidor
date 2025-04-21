@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
+    linux-headers-$(uname -r) \
     libgcc-12-dev \
     tesseract-ocr \
     tesseract-ocr-eng \
@@ -40,4 +41,3 @@ EXPOSE 5000
 # Comando para ejecutar la aplicación
 #CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:$PORT app:app"]
 CMD ["sh", "-c", "gunicorn -w 4 -k gthread --threads 2 -b 0.0.0.0:$PORT app:app"]
-
