@@ -58,5 +58,7 @@ def procesar_imagen():
         return jsonify({'resultado': None, 'error': 'No se pudo extraer texto del código QR'}), 200
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == '__main__':
+    # El puerto es configurable, por si se ejecuta en diferentes entornos
+    port = int(os.environ.get("PORT", 5000))  # Usa el puerto que el entorno asigna
+    app.run(host='0.0.0.0', port=port)  # Asegúrate de que el servidor sea accesible externamente
