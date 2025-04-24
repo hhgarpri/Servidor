@@ -6,7 +6,8 @@ from pyzxing import BarCodeReader
 
 # Constantes
 TEMP_ZOOM_PATH = "temporal_zoom.jpg"
-TEMP_BARCODE_PATH = "codigo_barras_mejorado.jpg"
+TEMP_BARCODE_PATH = "temporal_barcode.jpg"
+
 
 def leer_codigo_barras(imagen_path):
     if not os.path.exists(imagen_path):
@@ -31,11 +32,10 @@ def leer_codigo_barras(imagen_path):
 
     return ""
 
-def binarizar_negros(imagen, umbral=80):
-    mascara = np.all(imagen < umbral, axis=2)
-    resultado = imagen.copy()
-    resultado[mascara] = [0, 0, 0]
-    return resultado
+def binarizar_negros(imagen, umbral):
+    gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
+    _, binaria = cv2.threshold(gris, umbral, 255, cv2.THRESH_BINARY)
+    return binaria
 
 def detectar_codigo_barras(ruta_imagen):
     print(f"🔍 Cargando imagen desde: {ruta_imagen}")
@@ -46,65 +46,60 @@ def detectar_codigo_barras(ruta_imagen):
         return None
 
     lector = BarCodeReader()
-    max_zoom_intentos = 10
-    umbrales = list(range(80, 130, 5))
+    max_zoom_intentos = 5
+    umbrales = list(range(80, 120, 10))
     brillo_factor = 1
     for intento in range(max_zoom_intentos):
         escala = 1 + intento * 0.2
         print(f"🔍 Intento con zoom x{escala:.1f}")
         img_escalada = cv2.resize(img_original, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
-        # Aumentar brillo con 0.1 * intento
-        brillo_factor = brillo_factor + 0.05 * intento
-        print(brillo_factor)
-        img_escalada = np.clip(img_escalada * brillo_factor, 0, 255).astype(np.uint8)
+        
+        # Aumentar brillo con 0.8 * intento
+        if brillo_factor < 1.4:
+            brillo_factor = 1 + 0.8 * intento
+            img_escalada = np.clip(img_escalada * brillo_factor, 0, 255).astype(np.uint8)
 
+        # Guardar imagen y aplicar filtro de enfoque
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
-        print(TEMP_ZOOM_PATH, "------------------------------------------------------------------------------------------------------------------------")
         img = cv2.imread(TEMP_ZOOM_PATH)
         sharpen_kernel = np.array([[0, -1, 0],
-                                [-1, 5,-1],
-                                [0, -1, 0]])
-
-        # Aplicar filtro
+                                   [-1, 5, -1],
+                                   [0, -1, 0]])
         sharpened = cv2.filter2D(img, -1, sharpen_kernel)
-        cv2.imwrite("temporal_zoom.jpg", sharpened)
+        cv2.imwrite(TEMP_ZOOM_PATH, sharpened)
+
         resultado = lector.decode(TEMP_ZOOM_PATH)
         print(f"🔍 Resultado con zoom x{escala:.1f}")
-        
+
         if resultado and isinstance(resultado, list) and isinstance(resultado[0], dict):
             info = resultado[0]
-            if 'parsed' in info:
+            formato = info.get("format", b"").decode("utf-8", errors="ignore") if isinstance(info.get("format"), bytes) else str(info.get("format"))
+            if formato == "PDF_417":
                 raw_data = info.get("raw")
                 if raw_data:
                     print(f"✅ Código detectado sin limpieza con zoom x{escala:.1f}")
                     return TEMP_ZOOM_PATH
 
-            if 'points' in info and isinstance(info['points'], list):
-                puntos = [(int(p[0]), int(p[1])) for p in info['points']]
-                x_min, x_max = min(p[0] for p in puntos), max(p[0] for p in puntos)
-                y_min, y_max = min(p[1] for p in puntos), max(p[1] for p in puntos)
+        # Aplicar binarización directamente sobre la imagen escalada
+        for umbral in umbrales:
+            binarizada = binarizar_negros(img_escalada, umbral)
+            cv2.imwrite(TEMP_BARCODE_PATH, binarizada)
+            resultado_mejorado = lector.decode(TEMP_BARCODE_PATH)
 
-                margen = int(img_escalada.shape[1] * 0.03)
-                x_min, x_max = max(0, x_min - margen), min(img_escalada.shape[1], x_max + margen)
-                y_min, y_max = max(0, y_min - margen), min(img_escalada.shape[0], y_max + margen)
+            if resultado_mejorado and isinstance(resultado_mejorado[0], dict):
+                info_mejorado = resultado_mejorado[0]
+                formato_mejorado = info_mejorado.get("format", b"").decode("utf-8", errors="ignore") if isinstance(info_mejorado.get("format"), bytes) else str(info_mejorado.get("format"))
+                if formato_mejorado == "PDF_417" and info_mejorado.get("raw"):
+                    print(f"✅ Código detectado con limpieza y umbral {umbral} en zoom x{escala:.1f}")
+                    return TEMP_BARCODE_PATH
+                else:
+                    print(f"❌ Formato no válido o código no detectado con umbral {umbral} en zoom x{escala:.1f}")
+            else:
+                print(f"❌ Falló con umbral {umbral} en zoom x{escala:.1f}")
 
-                recorte = img_escalada[y_min:y_max, x_min:x_max]
-
-                for umbral in umbrales:
-                    recorte_bin = binarizar_negros(recorte, umbral)
-                    cv2.imwrite(TEMP_BARCODE_PATH, recorte_bin)
-                    resultado_mejorado = lector.decode(TEMP_BARCODE_PATH)
-
-                    if resultado_mejorado and isinstance(resultado_mejorado[0], dict) and resultado_mejorado[0].get("raw"):
-                        print(f"✅ Código detectado con limpieza y umbral {umbral} en zoom x{escala:.1f}")
-                        return TEMP_BARCODE_PATH
-                    else:
-                        print(f"❌ Falló con umbral {umbral} en zoom x{escala:.1f}")
-        else:
-            print("⚠️ Código no detectado o sin puntos válidos para recorte.")
-    
     print("❌ No se detectó el código de barras después de todos los intentos.")
     return None
+
 
 def extraer_texto_qr(ruta_imagen=""):
     ubicacion = detectar_codigo_barras(ruta_imagen)
