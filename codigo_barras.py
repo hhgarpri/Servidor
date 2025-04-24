@@ -46,50 +46,59 @@ def detectar_codigo_barras(ruta_imagen):
         return None
 
     lector = BarCodeReader()
+    max_zoom_intentos = 10
+    umbrales = list(range(80, 130, 5))
 
-    for intento in range(6):
+    for intento in range(max_zoom_intentos):
         escala = 1 + intento * 0.2
         print(f"🔍 Intento con zoom x{escala:.1f}")
-
         img_escalada = cv2.resize(img_original, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
+        print(TEMP_ZOOM_PATH, "------------------------------------------------------------------------------------------------------------------------")
+        img = cv2.imread(TEMP_ZOOM_PATH)
+        sharpen_kernel = np.array([[0, -1, 0],
+                                [-1, 5,-1],
+                                [0, -1, 0]])
 
+        # Aplicar filtro
+        sharpened = cv2.filter2D(img, -1, sharpen_kernel)
+        cv2.imwrite("temporal_zoom.jpg", sharpened)
         resultado = lector.decode(TEMP_ZOOM_PATH)
         print(f"🔍 Resultado con zoom x{escala:.1f}")
         
-        if not resultado or 'parsed' not in resultado[0]:
-            print(f"❌ No se detectó código con zoom x{escala:.1f}")
-            continue
+        if resultado and isinstance(resultado, list) and isinstance(resultado[0], dict):
+            info = resultado[0]
+            if 'parsed' in info:
+                raw_data = info.get("raw")
+                if raw_data:
+                    print(f"✅ Código detectado sin limpieza con zoom x{escala:.1f}")
+                    return TEMP_ZOOM_PATH
 
-        info = resultado[0]
-        if 'points' in info:
-            puntos = [(int(p[0]), int(p[1])) for p in info['points']]
-            x_min, x_max = min(p[0] for p in puntos), max(p[0] for p in puntos)
-            y_min, y_max = min(p[1] for p in puntos), max(p[1] for p in puntos)
+            if 'points' in info and isinstance(info['points'], list):
+                puntos = [(int(p[0]), int(p[1])) for p in info['points']]
+                x_min, x_max = min(p[0] for p in puntos), max(p[0] for p in puntos)
+                y_min, y_max = min(p[1] for p in puntos), max(p[1] for p in puntos)
 
-            margen = int(img_escalada.shape[1] * 0.02)
-            x_min, x_max = max(0, x_min - margen), min(img_escalada.shape[1], x_max + margen)
-            y_min, y_max = max(0, y_min - margen), min(img_escalada.shape[0], y_max + margen)
+                margen = int(img_escalada.shape[1] * 0.03)
+                x_min, x_max = max(0, x_min - margen), min(img_escalada.shape[1], x_max + margen)
+                y_min, y_max = max(0, y_min - margen), min(img_escalada.shape[0], y_max + margen)
 
-            recorte = img_escalada[y_min:y_max, x_min:x_max]
+                recorte = img_escalada[y_min:y_max, x_min:x_max]
 
-            for umbral in range(85, 111, 5):
-                recorte_bin = binarizar_negros(recorte, umbral)
-                cv2.imwrite(TEMP_BARCODE_PATH, recorte_bin)
+                for umbral in umbrales:
+                    recorte_bin = binarizar_negros(recorte, umbral)
+                    cv2.imwrite(TEMP_BARCODE_PATH, recorte_bin)
+                    resultado_mejorado = lector.decode(TEMP_BARCODE_PATH)
 
-                if lector.decode(TEMP_BARCODE_PATH)[0].get("raw"):
-                    print(f"✅ Código detectado con zoom x{escala:.1f} y umbral {umbral}")
-                    os.remove(TEMP_ZOOM_PATH)
-                    return TEMP_BARCODE_PATH
-
-                print(f"❌ No se detectó código con umbral {umbral}")
+                    if resultado_mejorado and isinstance(resultado_mejorado[0], dict) and resultado_mejorado[0].get("raw"):
+                        print(f"✅ Código detectado con limpieza y umbral {umbral} en zoom x{escala:.1f}")
+                        return TEMP_BARCODE_PATH
+                    else:
+                        print(f"❌ Falló con umbral {umbral} en zoom x{escala:.1f}")
         else:
-            print("⚠️ Código leído, pero sin puntos para recortar.")
-
-    if os.path.exists(TEMP_ZOOM_PATH):
-        os.remove(TEMP_ZOOM_PATH)
-
-    print("❌ No se detectó el código de barras.")
+            print("⚠️ Código no detectado o sin puntos válidos para recorte.")
+    
+    print("❌ No se detectó el código de barras después de todos los intentos.")
     return None
 
 def extraer_texto_qr(ruta_imagen=""):
@@ -99,25 +108,26 @@ def extraer_texto_qr(ruta_imagen=""):
 
     texto = leer_codigo_barras(ubicacion)
     texto = texto.replace("\x00", " ").strip()
-    datos = {}
 
-    if re.match(r'^\d{10}\s+PubDSK_1', texto):
-        datos = extraer_datos_cedula(texto)
-
-    elif re.match(r'^I\d+\s+PubDSK_1', texto):
-        datos = extraer_datos_tarjeta_identidad(texto)
-
-    else:
-        datos = {"resultado": "No se reconoce el formato del texto"}
-
-    if os.path.exists(ubicacion):
+    if os.path.exists(TEMP_ZOOM_PATH):
+        os.remove(TEMP_ZOOM_PATH)
+        print(f"🗑️ Imagen temporal eliminada: {TEMP_ZOOM_PATH}")
+    
+    if ubicacion != ruta_imagen and os.path.exists(ubicacion):
         os.remove(ubicacion)
         print(f"🗑️ Imagen temporal eliminada: {ubicacion}")
 
-    return datos
+    if re.match(r'^\d{10}\s+PubDSK_1', texto):
+        return extraer_datos_cedula(texto)
+
+    elif re.match(r'^I\d+\s+PubDSK_1', texto):
+        return extraer_datos_tarjeta_identidad(texto)
+
+    return {"resultado": "No se reconoce el formato del texto"}
 
 
 def extraer_datos_cedula(texto):
+    tipo_Documento = "Cédula Ciudadana"
     match = re.search(r'(\d{10})([A-ZÑÁÉÍÓÚÜ]+)', texto)
     if not match:
         return {"resultado": "No se pudo detectar la cédula y el apellido."}
@@ -151,6 +161,7 @@ def extraer_datos_cedula(texto):
     tipo_sangre = match_sangre.group(0) if match_sangre else "N/D"
 
     return {
+        "Tipo_documento": tipo_Documento,
         "cedula": cedula,
         "apellido1": apellido1,
         "apellido2": apellido2,
@@ -162,6 +173,7 @@ def extraer_datos_cedula(texto):
 
 
 def extraer_datos_tarjeta_identidad(texto):
+    tipo_Documento = "Tarjeta de Identidad"
     texto = re.sub(r'\x00+', ' ', texto).strip()
     match_cedula = re.search(r"PubDSK_1\s+(\d{18})", texto)
     cedula = match_cedula.group(1)[8:] if match_cedula else "N/D"
@@ -184,6 +196,7 @@ def extraer_datos_tarjeta_identidad(texto):
         apellido1 = apellido2 = nombre = "N/D"
 
     return {
+        "Tipo_documento": tipo_Documento,
         "cedula": cedula,
         "apellido1": apellido1,
         "apellido2": apellido2,
@@ -203,4 +216,5 @@ def imprimir_datos(cedula, apellido1, apellido2, nombre, fecha_nac, sexo, tipo_s
     print(f"Fecha Nac:        {fecha_nac}")
     print(f"Sexo:             {sexo}")
     print(f"Tipo de Sangre:   {tipo_sangre}")
+
 

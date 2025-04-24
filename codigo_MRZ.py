@@ -25,13 +25,24 @@ def detectar_mrz(ruta_imagen):
     print(f"🔍 Cargando imagen desde: {ruta_imagen}")
     imagen = Image.open(ruta_imagen)
 
-    for umbral in range(200, 130, -10):  # 200, 190, ..., 140
+    mrz = None
+    cedula_detectada = False
+    encontrado_simbolo_mrz = False
+
+    for umbral in range(220, 125, -10):  # Va de 220 a 130, paso de -10
         print(f"🌓 Probando con umbral: {umbral}")
         imagen_filtrada = filtrar_negro(imagen, umbral)
         texto_crudo = pytesseract.image_to_string(imagen_filtrada, lang='eng+spa')
 
-        if "<" not in texto_crudo:
-            print("❌ No se detectaron signos '<'. No parece haber MRZ.")
+        if not encontrado_simbolo_mrz and umbral >= 200:
+            if "<" not in texto_crudo:
+                print("❌ No se detectaron signos '<'. Intentando con menor umbral...")
+                continue
+            else:
+                encontrado_simbolo_mrz = True  # Habilita búsqueda completa
+
+        elif not encontrado_simbolo_mrz and umbral < 200:
+            print("❌ No se encontró el signo '<' hasta el umbral 200. Cancelando búsqueda.")
             return None
 
         lineas = [linea.strip() for linea in texto_crudo.strip().split('\n') if linea.strip()]
@@ -39,48 +50,93 @@ def detectar_mrz(ruta_imagen):
 
         if mrz:
             print("✅ MRZ detectado con éxito.")
-            break
-        else:
-            print("⏬ MRZ incompleto, bajando umbral...")
-            
+            tipo_mrz = ""
+            primera_linea = mrz[0].upper()
 
-    if not mrz:
-        print("⚠️ No se identificaron los datos de la Cedula")
-        return False
+            try:
+                if "PC" in primera_linea:
+                    tipo_mrz = "Permiso Temporal"
+                    linea1 = mrz[0]
+                    linea2 = mrz[1]
+                    linea3 = mrz[2]
 
-    linea2 = mrz[1]
-    fecha_raw = linea2[0:6]
-    yy, mm, dd = fecha_raw[0:2], fecha_raw[2:4], fecha_raw[4:6]
-    anio = f"19{yy}" if int(yy) >= 25 else f"20{yy}"
-    fecha_nac_fmt = f"{anio}-{mm}-{dd}"
-    sexo = linea2[7]
-    if sexo == "M":
-        sexo = 'Masculino'
-    elif sexo == "F":
-        sexo = 'Femenino'
-    else:
-        sexo = ''
+                    fecha_raw = linea2[0:6]
+                    if not fecha_raw.isdigit():
+                        raise ValueError("La fecha de nacimiento no es válida")
 
-    inicio = linea2.find("C0L")
-    fin = linea2.find("<", inicio)
-    cedula = linea2[inicio + 3:fin] if inicio != -1 and fin != -1 else ""
-    tipo_sangre = ""  # Puedes implementar esta parte si conoces el formato
+                    yy, mm, dd = fecha_raw[0:2], fecha_raw[2:4], fecha_raw[4:6]
+                    anio = f"19{yy}" if int(yy) >= 25 else f"20{yy}"
+                    fecha_nac_fmt = f"{anio}-{mm}-{dd}"
 
-    linea3 = mrz[2].replace('<', ' ').strip()
-    partes = linea3.split()
-    apellido1 = partes[0] if len(partes) > 0 else ""
-    apellido2 = partes[1] if len(partes) > 1 else ""
-    nombre = ' '.join(partes[2:]) if len(partes) > 2 else ""
+                    sexo = linea2[7]
+                    sexo = 'Masculino' if sexo == 'M' else 'Femenino' if sexo == 'F' else ''
 
-    return {
-        "cedula": cedula,
-        "apellido1": apellido1,
-        "apellido2": apellido2,
-        "nombre": nombre,
-        "fecha_nacimiento": fecha_nac_fmt,
-        "sexo": sexo,
-        "tipo_sangre": tipo_sangre
-    }
+                    inicio = linea1.find("COL") if "COL" in linea1 else linea1.find("C0L")
+                    fin = linea1.find("<", inicio)
+                    cedula = linea1[inicio + 3:fin] if inicio != -1 and fin != -1 else ""
+
+                    if cedula:
+                        cedula_detectada = True
+
+                    partes = linea3.replace('<', ' ').strip().split()
+                    apellido1 = partes[0] if len(partes) > 0 else ""
+                    apellido2 = partes[1] if len(partes) > 1 else ""
+                    nombre = ' '.join(partes[2:]) if len(partes) > 2 else ""
+
+                elif "CC" in primera_linea or "C0L" in primera_linea:
+                    tipo_mrz = "Cédula Ciudadana"
+                    linea2 = mrz[1]
+                    linea3 = mrz[2]
+
+                    fecha_raw = linea2[0:6]
+                    if not fecha_raw.isdigit():
+                        raise ValueError("La fecha de nacimiento no es válida")
+
+                    yy, mm, dd = fecha_raw[0:2], fecha_raw[2:4], fecha_raw[4:6]
+                    anio = f"19{yy}" if int(yy) >= 25 else f"20{yy}"
+                    fecha_nac_fmt = f"{anio}-{mm}-{dd}"
+
+                    sexo = linea2[7]
+                    sexo = 'Masculino' if sexo == 'M' else 'Femenino' if sexo == 'F' else ''
+
+                    inicio = linea2.find("C0L") if "C0L" in linea2 else linea2.find("COL")
+                    fin = linea2.find("<", inicio)
+                    cedula = linea2[inicio + 3:fin] if inicio != -1 and fin != -1 else ""
+
+                    if cedula:
+                        cedula_detectada = True
+
+                    partes = linea3.replace('<', ' ').strip().split()
+                    apellido1 = partes[0] if len(partes) > 0 else ""
+                    apellido2 = partes[1] if len(partes) > 1 else ""
+                    nombre = ' '.join(partes[2:]) if len(partes) > 2 else ""
+
+                else:
+                    tipo_mrz = "Desconocido"
+                    continue
+
+                if cedula_detectada:
+                    return {
+                        "Tipo_documento": tipo_mrz,
+                        "cedula": cedula,
+                        "apellido1": apellido1,
+                        "apellido2": apellido2,
+                        "nombre": nombre,
+                        "fecha_nacimiento": fecha_nac_fmt,
+                        "sexo": sexo,
+                        "tipo_sangre": "",
+                        "mrz_crudo": mrz
+                    }
+                else:
+                    print("⚠️ MRZ detectado pero no se encontró la cédula. Bajando umbral...")
+
+            except Exception as e:
+                print(f"❌ Error al procesar los datos del MRZ: {e}")
+                continue
+
+    print("❌ No se pudo detectar la cédula tras probar todos los umbrales.")
+    return {"error": "No se pudo extraer una cédula válida del MRZ", "mrz_crudo": mrz if mrz else []}
+
 
 def imprimir_datos(cedula, apellido1, apellido2, nombre, fecha_nac, sexo, tipo_sangre):
     print("✅ DATOS EXTRAÍDOS")

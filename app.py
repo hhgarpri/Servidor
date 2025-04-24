@@ -26,36 +26,49 @@ def procesar_imagen():
 
     imagen = request.files['imagen']
 
-    # Verificar si la imagen tiene una extensión permitida
     if not allowed_file(imagen.filename):
         return jsonify({'resultado': None, 'error': 'Archivo no permitido. Solo se permiten imágenes.'}), 400
 
-    # Obtener y mostrar el tamaño de la imagen en bytes
-    tamanio_imagen = len(imagen.read())
-    print(f"Tamaño de la imagen recibida: {tamanio_imagen//1024} Kb")
-    imagen.seek(0)  # Volver al inicio del stream para poder guardarla
-
-    carpeta_temporal = "temporal"
-    os.makedirs(carpeta_temporal, exist_ok=True)
-
-    nombre_seguro = secure_filename(imagen.filename)
-    imagen_path = os.path.join(carpeta_temporal, nombre_seguro)
-    imagen.save(imagen_path)
-
     try:
+        # Leer imagen y verificar tamaño
+        contenido = imagen.read()
+        tamanio_imagen = len(contenido)
+        print(f"Tamaño de la imagen recibida: {tamanio_imagen//1024} Kb")
+
+        if tamanio_imagen == 0:
+            return jsonify({'resultado': None, 'error': 'La imagen está vacía'}), 400
+
+        imagen.seek(0)  # Reset para guardar
+
+        carpeta_temporal = "temporal"
+        os.makedirs(carpeta_temporal, exist_ok=True)
+
+        nombre_seguro = secure_filename(imagen.filename)
+        imagen_path = os.path.join(carpeta_temporal, nombre_seguro)
+        imagen.save(imagen_path)
+
+        # Validación básica con OpenCV si quieres añadir
+        import cv2
+        img_cv = cv2.imread(imagen_path)
+        if img_cv is None:
+            os.remove(imagen_path)
+            return jsonify({'resultado': None, 'error': 'No se pudo abrir la imagen con OpenCV'}), 400
+
         texto_extraido = detectar_mrz(imagen_path)
         if texto_extraido is None:
             texto_extraido = extraer_texto_qr(imagen_path)
+
+        os.remove(imagen_path)  # Eliminar al final si todo fue bien
+
+        if texto_extraido and isinstance(texto_extraido, dict):
+            return jsonify({'resultado': texto_extraido}), 200
+        else:
+            return jsonify({'resultado': None, 'error': 'No se pudo extraer texto del código QR'}), 200
+
     except Exception as e:
-        os.remove(imagen_path)
-        return jsonify({'resultado': None, 'error': str(e)}), 500
-
-    os.remove(imagen_path)
-
-    if texto_extraido and isinstance(texto_extraido, dict):
-        return jsonify({'resultado': texto_extraido}), 200
-    else:
-        return jsonify({'resultado': None, 'error': 'No se pudo extraer texto del código QR'}), 200
+        import traceback
+        traceback.print_exc()
+        return jsonify({'resultado': None, 'error': f'Error inesperado: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
