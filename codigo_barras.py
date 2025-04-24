@@ -48,11 +48,16 @@ def detectar_codigo_barras(ruta_imagen):
     lector = BarCodeReader()
     max_zoom_intentos = 10
     umbrales = list(range(80, 130, 5))
-
+    brillo_factor = 1
     for intento in range(max_zoom_intentos):
         escala = 1 + intento * 0.2
         print(f"🔍 Intento con zoom x{escala:.1f}")
         img_escalada = cv2.resize(img_original, None, fx=escala, fy=escala, interpolation=cv2.INTER_LINEAR)
+        # Aumentar brillo con 0.1 * intento
+        brillo_factor = brillo_factor + 0.05 * intento
+        print(brillo_factor)
+        img_escalada = np.clip(img_escalada * brillo_factor, 0, 255).astype(np.uint8)
+
         cv2.imwrite(TEMP_ZOOM_PATH, img_escalada)
         print(TEMP_ZOOM_PATH, "------------------------------------------------------------------------------------------------------------------------")
         img = cv2.imread(TEMP_ZOOM_PATH)
