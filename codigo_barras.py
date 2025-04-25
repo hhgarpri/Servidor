@@ -137,25 +137,20 @@ def extraer_datos_cedula(texto):
     resto = texto[match.end():].strip().split()
     apellido2 = resto[0] if resto else "N/D"
 
-    match_fecha = re.search(r'(19|20)\d{6}', texto)
-    fecha_nac = match_fecha.group(0) if match_fecha else "N/D"
-    fecha_nac_fmt = f"{fecha_nac[:4]}-{fecha_nac[4:6]}-{fecha_nac[6:]}" if fecha_nac != "N/D" else "N/D"
-
-    nombre = "N/D"
-    sexo = "N/D"
+    match_fecha = re.search(r'(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])', texto)
     if match_fecha:
-        idx_apellido2 = texto.find(apellido2) + len(apellido2)
-        idx_fecha = texto.find(fecha_nac)
-        nombre_raw = texto[idx_apellido2:idx_fecha].strip()
+        fecha_nac = match_fecha.group(0)
+        fecha_nac_fmt = f"{fecha_nac[:4]}-{fecha_nac[4:6]}-{fecha_nac[6:]}"
+    else:
+        fecha_nac_fmt = "N/D"
 
-        match_sexo = re.search(r'0([MF])', nombre_raw)
-        if match_sexo:
-            sexo = "Masculino" if match_sexo.group(1) == "M" else "Femenino"
-            nombre = nombre_raw[:match_sexo.start()].strip()
-        else:
-            nombre = nombre_raw.strip()
+    nombre_match = re.search(r'([A-ZÑÁÉÍÓÚÜ]{2,}(?:\s+[A-ZÑÁÉÍÓÚÜ]{2,})+)', texto)
+    nombre_completo = nombre_match.group(0) if nombre_match else "N/D"
+    palabras = nombre_completo.split()
+    nombre = ' '.join(palabras[2:])
 
-        nombre = re.sub(r'\s+', ' ', nombre)
+    match_sexo = re.search(r'0([MF])', texto)
+    sexo = "Masculino" if match_sexo and match_sexo.group(1) == "M" else "Femenino" if match_sexo else "N/D"
 
     match_sangre = re.search(r'(A|B|AB|O)[+-]', texto)
     tipo_sangre = match_sangre.group(0) if match_sangre else "N/D"
